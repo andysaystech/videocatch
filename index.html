@@ -513,17 +513,22 @@ function walkLd(obj, add) {
   }
 }
 
-/* ---------- 探測檔案大小（透過 proxy 發 HEAD） ---------- */
-async function probeSizes(items) {
-  const tasks = items.slice(0, 25).map(async (it) => {
-    if (it.stream || it.size) return;
-    try {
-      const r = await fetch(CORS_PROXY + encodeURIComponent(it.url), { method: 'HEAD' });
-      const len = r.headers.get('content-length');
-      if (len) it.size = parseInt(len, 10);
-    } catch (_) {}
-  });
-  await Promise.all(tasks);
+/* ---------- 探測檔案大小（透過 proxy 發 HEAD） ----------
+ * 跳過已知擋機房 IP 的 CDN，省 rate limit 額度 */
+const SKIP_HEAD_HOSTS = /(?:googlevideo\.com|googleusercontent\.com|fbcdn\.net|cdninstagram\.com|tiktokcdn\.com|twimg\.com)/i;
+async function probeSizes(items, concurrency = 6) {
+  const queue = items.filter(it => !it.stream && !it.size && !SKIP_HEAD_HOSTS.test(it.url)).slice(0, 12);
+  const next = async () => {
+    while (queue.length) {
+      const it = queue.shift();
+      try {
+        const r = await fetch(CORS_PROXY + encodeURIComponent(it.url), { method: 'HEAD' });
+        const len = r.headers.get('content-length');
+        if (len) it.size = parseInt(len, 10);
+      } catch (_) {}
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, next));
 }
 
 /* ---------- 後端 /extract API（Piped / cobalt） ---------- */
@@ -580,9 +585,13 @@ async function run() {
   clearResults();
   setStatus('解析中…', false, true);
 
+  // YouTube/FB/IG/TikTok HTML scan 不會有結果，extract 失敗就直接結束，省 proxy 額度
+  const NEEDS_DECODE_RE = /(?:youtube\.com|youtu\.be|facebook\.com|fb\.watch|instagram\.com|tiktok\.com|twitter\.com|x\.com)/i;
+  const needsDecode = NEEDS_DECODE_RE.test(raw);
+
   try {
-    // ── Step 1：先試後端 /extract（Piped / cobalt） ──
-    setStatus('解析中（YouTube / FB / IG 等需要解碼的平台）…', false, true);
+    // ── Step 1：後端 /extract（catchv → Piped → Invidious → cobalt） ──
+    setStatus('解析中…', false, true);
     const apiData = await tryExtractApi(raw);
     if (apiData && apiData.items.length) {
       if (apiData.meta) showMeta(apiData.meta);
@@ -591,7 +600,15 @@ async function run() {
       return;
     }
 
-    // ── Step 2：退回前端 HTML 掃描 ──
+    if (needsDecode) {
+      setStatus(
+        '無法解析這個影片 😶<br>'
+        + '可能原因：私人/會員限定/DRM、或暫時被平台限流。請過幾分鐘再試。',
+        true);
+      return;
+    }
+
+    // ── Step 2：退回前端 HTML 掃描（一般網站、eyny 等） ──
     setStatus('改用前端 HTML 掃描…', false, true);
     const html = await fetchHtml(raw);
     const { items, meta, iframes } = scanHtml(html, raw);
