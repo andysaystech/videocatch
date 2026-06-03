@@ -328,8 +328,8 @@ function renderFromBookmarklet(payload) {
     items.push({
       kind: cls.kind, stream: cls.stream, ext: cls.ext, url,
       label: hint || '', height: 0, bitrate: 0, size: 0,
-      // 書籤直接抓的影片 = 瀏覽器正在播的，視為影＋音合併
-      combined: cls.kind === 'video' && !cls.stream,
+      // 書籤抓的：mp4 + m3u8 都當影＋音合併（瀏覽器在播什麼）
+      combined: cls.kind === 'video',
     });
   }
   if (payload.title || payload.thumb) {
@@ -420,11 +420,20 @@ function escapeHtml(s) {
 
 /* ---------- 渲染結果 ---------- */
 function renderBuckets(items) {
-  const combined = [], others = [];
-  for (const it of items) (it.combined ? combined : others).push(it);
+  const combined = [], audios = [], others = [];
+  for (const it of items) {
+    if (it.kind === 'audio') audios.push(it);
+    else if (it.combined) combined.push(it);
+    else others.push(it);
+  }
 
   const byQ = (a, b) => (b.height || b.bitrate || 0) - (a.height || a.bitrate || 0);
-  combined.sort(byQ);
+  // 影＋音：串流(m3u8) 排前面，再來高解析度
+  combined.sort((a, b) => {
+    if (!!b.stream - !!a.stream) return !!b.stream - !!a.stream;
+    return byQ(a, b);
+  });
+  audios.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
   others.sort((a, b) => {
     const ord = { video: 0, audio: 1, other: 2 };
     const oa = ord[a.kind] ?? 9, ob = ord[b.kind] ?? 9;
@@ -439,11 +448,18 @@ function renderBuckets(items) {
       <ul class="items">${combined.map(renderItem).join('')}</ul>
     </section>`);
   }
+  if (audios.length) {
+    html.push(`<section class="bucket audio">
+      <header><span class="dot"></span><span class="name">純音訊（建議高 bitrate）</span>
+        <span class="count">${audios.length} 項</span></header>
+      <ul class="items">${audios.map(renderItem).join('')}</ul>
+    </section>`);
+  }
   if (others.length) {
     const id = 'others-' + Math.random().toString(36).slice(2, 8);
     html.push(`<section class="bucket dim">
       <header class="collapsible" data-target="${id}">
-        <span class="dot"></span><span class="name">其他規格（純影像／純音訊／串流）</span>
+        <span class="dot"></span><span class="name">其他規格（純影像／字幕／低品質）</span>
         <span class="count">${others.length} 項</span>
         <span class="chev">▸</span>
       </header>
@@ -482,13 +498,17 @@ function renderItem(it) {
   if (it.size) tags.push(`<span class="tag">${fmtSize(it.size)}</span>`);
 
   const label = it.label || (it.kind === 'audio' ? '音訊' : '影片');
-  // 走 worker 加 Content-Disposition: attachment → 點了直接下載，不開新分頁
   const filename = buildFilename(it);
-  const dlUrl = WORKER_BASE + '/?url=' + encodeURIComponent(it.url)
-    + '&dl=1&filename=' + encodeURIComponent(filename);
-  const action = it.stream
-    ? `<button class="btn" data-copy="${escapeHtml(it.url)}">複製串流網址</button>`
-    : `<a class="btn primary" href="${escapeHtml(dlUrl)}" download="${escapeHtml(filename)}">下載</a>`;
+  let action;
+  if (it.stream) {
+    // m3u8/mpd：點下載 → 前端抓所有片段 → 合併 blob → 偽 mp4 下載
+    action = `<button class="btn primary" data-m3u8="${escapeHtml(it.url)}" data-filename="${escapeHtml(filename.replace(/\.[a-z0-9]+$/i, '.mp4'))}">下載 MP4</button>`;
+  } else {
+    // 一般檔案：走 worker 加 Content-Disposition: attachment → 直接下載
+    const dlUrl = WORKER_BASE + '/?url=' + encodeURIComponent(it.url)
+      + '&dl=1&filename=' + encodeURIComponent(filename);
+    action = `<a class="btn primary" href="${escapeHtml(dlUrl)}" download="${escapeHtml(filename)}">下載</a>`;
+  }
   return `<li>
     <div class="row-tags">${tags.join('')}</div>
     <div class="row-main">
@@ -502,8 +522,8 @@ function renderItem(it) {
   </li>`;
 }
 
-// 折疊區開合
-els.results.addEventListener('click', (e) => {
+// 結果區事件：折疊、複製、m3u8 下載
+els.results.addEventListener('click', async (e) => {
   const head = e.target.closest('header.collapsible');
   if (head) {
     const ul = document.getElementById(head.dataset.target);
@@ -513,14 +533,146 @@ els.results.addEventListener('click', (e) => {
     }
     return;
   }
-  const btn = e.target.closest('[data-copy]');
-  if (btn) {
-    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
-      const old = btn.textContent; btn.textContent = '✓ 已複製';
-      setTimeout(() => btn.textContent = old, 1200);
+  const m3u8Btn = e.target.closest('[data-m3u8]');
+  if (m3u8Btn) {
+    e.preventDefault();
+    await downloadM3u8(m3u8Btn.dataset.m3u8, m3u8Btn.dataset.filename, m3u8Btn);
+    return;
+  }
+  const copyBtn = e.target.closest('[data-copy]');
+  if (copyBtn) {
+    navigator.clipboard.writeText(copyBtn.dataset.copy).then(() => {
+      const old = copyBtn.textContent; copyBtn.textContent = '✓ 已複製';
+      setTimeout(() => copyBtn.textContent = old, 1200);
     });
   }
 });
+
+/* ---------- m3u8 → mp4 下載 ----------
+ * 1) 抓 playlist
+ * 2) 若是 master，挑頻寬最高的 variant
+ * 3) 解出所有 .ts/.m4s 片段網址
+ * 4) 用 worker proxy 平行下載（最多 6 路）
+ * 5) 按順序串接成 Blob，瀏覽器 trigger download
+ *
+ * 限制：
+ *   - AES-128 / SAMPLE-AES 加密：放棄（需 ffmpeg）
+ *   - 結果是 MPEG-TS 重新命名成 .mp4，VLC / Chrome / Safari 都能播；正規 mp4 需 ffmpeg 重封裝
+ *   - 大檔在記憶體裡組裝，>2GB 可能 OOM
+ */
+async function fetchViaProxy(url) {
+  // 直接抓有時可以，失敗才走 proxy
+  try {
+    const r = await fetch(url);
+    if (r.ok) return r;
+  } catch (_) {}
+  const r = await fetch(CORS_PROXY + encodeURIComponent(url));
+  if (!r.ok) throw new Error(`抓取失敗 ${r.status}: ${url}`);
+  return r;
+}
+
+function parseM3u8(text, baseUrl) {
+  const lines = text.split(/\r?\n/);
+  // 主清單：含 #EXT-X-STREAM-INF
+  if (lines.some(l => /^#EXT-X-STREAM-INF/i.test(l))) {
+    const variants = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (/^#EXT-X-STREAM-INF/i.test(lines[i])) {
+        const bw = parseInt(lines[i].match(/BANDWIDTH=(\d+)/)?.[1] || '0', 10);
+        const next = (lines[i + 1] || '').trim();
+        if (next && !next.startsWith('#')) {
+          try { variants.push({ bandwidth: bw, url: new URL(next, baseUrl).toString() }); }
+          catch (_) {}
+        }
+      }
+    }
+    return { master: true, variants };
+  }
+  // 媒體清單
+  const segments = [];
+  const keys = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('#EXT-X-KEY')) keys.push(line);
+    else if (!line.startsWith('#')) {
+      try { segments.push(new URL(line, baseUrl).toString()); } catch (_) {}
+    }
+  }
+  return { master: false, segments, keys };
+}
+
+async function downloadM3u8(m3u8Url, filename, btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  const setBtn = (t) => btn.textContent = t;
+  try {
+    setBtn('讀取清單…');
+    let res = await fetchViaProxy(m3u8Url);
+    let text = await res.text();
+    let baseUrl = m3u8Url;
+    let parsed = parseM3u8(text, baseUrl);
+
+    if (parsed.master) {
+      if (!parsed.variants.length) throw new Error('master playlist 沒有 variant');
+      parsed.variants.sort((a, b) => b.bandwidth - a.bandwidth);
+      baseUrl = parsed.variants[0].url;
+      setBtn('讀取最高品質…');
+      res = await fetchViaProxy(baseUrl);
+      text = await res.text();
+      parsed = parseM3u8(text, baseUrl);
+    }
+    if (parsed.master) throw new Error('巢狀 master playlist 不支援');
+
+    // 加密檢查
+    const encrypted = parsed.keys.some(k => /METHOD=(?!NONE\b)/i.test(k));
+    if (encrypted) {
+      throw new Error('此串流為 AES 加密 (DRM)，瀏覽器內無法直接解密。請改用 ffmpeg 手動下載。');
+    }
+
+    const segs = parsed.segments;
+    if (!segs.length) throw new Error('找不到片段');
+
+    // 平行抓（concurrency=6），保持順序
+    const buffers = new Array(segs.length);
+    let done = 0;
+    const concurrency = 6;
+    let next = 0;
+    async function worker() {
+      while (true) {
+        const i = next++;
+        if (i >= segs.length) return;
+        const r = await fetchViaProxy(segs[i]);
+        buffers[i] = await r.arrayBuffer();
+        done++;
+        if (done % 2 === 0 || done === segs.length) {
+          setBtn(`下載中 ${done}/${segs.length}`);
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: concurrency }, worker));
+
+    setBtn('組裝中…');
+    const blob = new Blob(buffers, { type: 'video/mp4' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'video.mp4';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    setBtn('✓ 已下載');
+    setTimeout(() => { setBtn(oldText); btn.disabled = false; }, 2500);
+  } catch (e) {
+    console.error(e);
+    alert('m3u8 下載失敗：' + (e.message || e));
+    setBtn(oldText);
+    btn.disabled = false;
+  }
+}
 
 /* ---------- 抓 HTML（先直連、再走 proxy） ---------- */
 async function fetchHtml(targetUrl) {
@@ -600,8 +752,8 @@ function scanHtml(html, baseUrl) {
       kind: cls.kind, stream: cls.stream, ext: cls.ext,
       url, label: hint.label || '',
       height: hint.height || 0, bitrate: hint.bitrate || 0, size: 0,
-      // 一般網頁裡直連的 mp4 視為影＋音
-      combined: cls.kind === 'video' && !cls.stream,
+      // 直連 mp4 與 m3u8/mpd 串流都當作影＋音
+      combined: cls.kind === 'video',
     });
   };
 
@@ -730,7 +882,8 @@ async function tryExtractApi(targetUrl) {
         resolution: f.resolution || (f.width && f.height ? `${f.width}x${f.height}` : ''),
         bitrate: f.tbr || f.vbr || f.abr || 0,
         size: f.filesize || f.filesize_approx || 0,
-        combined: hasV && hasA && !isStream,  // 影＋音 = 直接下載就能播
+        // 影＋音 = 直接下載就能播；m3u8/mpd 串流也視為影＋音（會被當成 mp4 下載）
+        combined: (hasV && hasA) || (isStream && kind === 'video'),
       });
     }
     return {
