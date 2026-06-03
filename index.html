@@ -240,7 +240,9 @@ footer.legal a { color: var(--muted); }
  * ============================================================ */
 
 // ←─── 改成你部署的 Cloudflare Worker 網址 ───→
-const CORS_PROXY = 'https://solitary-moon-0896.andysaystech.workers.dev/?url=';
+const WORKER_BASE = 'https://solitary-moon-0896.andysaystech.workers.dev';
+const CORS_PROXY = WORKER_BASE + '/?url=';
+const EXTRACT_API = WORKER_BASE + '/extract?url=';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -521,6 +523,47 @@ async function probeSizes(items) {
   await Promise.all(tasks);
 }
 
+/* ---------- 後端 /extract API（Piped / cobalt） ---------- */
+async function tryExtractApi(targetUrl) {
+  try {
+    const res = await fetch(EXTRACT_API + encodeURIComponent(targetUrl));
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !Array.isArray(data.formats) || !data.formats.length) return null;
+
+    const items = [];
+    for (const f of data.formats) {
+      if (!f.url) continue;
+      const isStream = /^(m3u8|hls|http_dash|dash)/i.test(f.protocol || '')
+                    || /\.(?:m3u8|mpd)(?:$|[?#])/i.test(f.url);
+      const hasV = f.vcodec && f.vcodec !== 'none';
+      const hasA = f.acodec && f.acodec !== 'none';
+      const kind = hasV ? 'video' : (hasA ? 'audio' : (isStream ? 'video' : 'video'));
+      items.push({
+        kind, stream: isStream,
+        url: f.url,
+        ext: f.ext || extOf(f.url),
+        label: f.format_note || f.format || '',
+        height: f.height || 0,
+        resolution: f.resolution || (f.width && f.height ? `${f.width}x${f.height}` : ''),
+        bitrate: f.tbr || f.vbr || f.abr || 0,
+        size: f.filesize || f.filesize_approx || 0,
+      });
+    }
+    return {
+      items,
+      meta: {
+        title: data.title || '',
+        thumb: data.thumbnail || '',
+        source: targetUrl,
+      },
+    };
+  } catch (e) {
+    console.warn('/extract 失敗：', e);
+    return null;
+  }
+}
+
 /* ---------- 主流程 ---------- */
 let running = false;
 async function run() {
@@ -535,6 +578,18 @@ async function run() {
   setStatus('解析中…', false, true);
 
   try {
+    // ── Step 1：先試後端 /extract（Piped / cobalt） ──
+    setStatus('解析中（YouTube / FB / IG 等需要解碼的平台）…', false, true);
+    const apiData = await tryExtractApi(raw);
+    if (apiData && apiData.items.length) {
+      if (apiData.meta) showMeta(apiData.meta);
+      setStatus('');
+      renderBuckets(apiData.items);
+      return;
+    }
+
+    // ── Step 2：退回前端 HTML 掃描 ──
+    setStatus('改用前端 HTML 掃描…', false, true);
     const html = await fetchHtml(raw);
     const { items, meta, iframes } = scanHtml(html, raw);
     if (meta) showMeta(meta);
