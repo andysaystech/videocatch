@@ -398,9 +398,50 @@ async function fetchHtml(targetUrl) {
     if (r.ok) return await r.text();
   } catch (_) { /* fall through */ }
   const proxied = CORS_PROXY + encodeURIComponent(targetUrl);
-  const r = await fetch(proxied);
+  let r = await fetch(proxied);
   if (!r.ok) throw new Error('proxy 回應 ' + r.status);
-  return await r.text();
+  let html = await r.text();
+
+  // eyny PoW：在瀏覽器解 SHA-256 找 nonce，把 cookie 透過 X-Vidgrab-Cookie 帶回去重抓
+  if (html.includes('瀏覽器安全檢查中') || html.includes('solvePoW')) {
+    setStatus('解 eyny 防爬蟲挑戰…', false, true);
+    const cookie = await solveEynyPoW(html);
+    if (cookie) {
+      r = await fetch(proxied, { headers: { 'X-Vidgrab-Cookie': cookie } });
+      if (r.ok) html = await r.text();
+    }
+  }
+  return html;
+}
+
+async function solveEynyPoW(html) {
+  const ch = html.match(/var challenge\s*=\s*"([a-f0-9]+)"/i)?.[1];
+  const ts = html.match(/var ts\s*=\s*"(\d+)"/i)?.[1];
+  const diff = parseInt(html.match(/var diff\s*=\s*(\d+)/i)?.[1] || '4', 10);
+  const prefix = html.match(/document\.cookie\s*=\s*"([a-f0-9_]+)_n=/i)?.[1];
+  if (!ch || !ts || !prefix) return null;
+
+  const target = '0'.repeat(diff);
+  const enc = new TextEncoder();
+  for (let nonce = 0; nonce < 10_000_000; nonce++) {
+    const buf = await crypto.subtle.digest('SHA-256', enc.encode(`${ch}|${ts}|${nonce}`));
+    const arr = new Uint8Array(buf);
+    // 只比較開頭幾個 byte，省掉整段 hex 字串組裝
+    const needBytes = Math.ceil(diff / 2);
+    let ok = true;
+    for (let i = 0; i < needBytes; i++) {
+      const hi = (arr[i] >> 4) & 0xf, lo = arr[i] & 0xf;
+      const idx = i * 2;
+      if (idx < diff && hi !== 0) { ok = false; break; }
+      if (idx + 1 < diff && lo !== 0) { ok = false; break; }
+    }
+    if (ok) {
+      return `${prefix}_n=${nonce}; ${prefix}_ts=${ts}; ${prefix}_ch=${ch}`;
+    }
+    // 每 5000 次讓出主執行緒，避免 UI 卡住
+    if ((nonce & 0x1fff) === 0) await new Promise(r => setTimeout(r));
+  }
+  return null;
 }
 
 function absoluteUrl(href, base) {
