@@ -102,14 +102,6 @@ header.hero { text-align: center; margin-bottom: 28px; }
 }
 .searchbar button:hover { transform: translateY(-1px); }
 .searchbar button:disabled { opacity: .6; cursor: progress; transform: none; }
-.searchbar #modeToggle {
-  background: var(--panel-2); color: var(--text); padding: 0 14px;
-  border: 1px solid var(--line);
-}
-.searchbar #modeToggle:hover { border-color: var(--accent); color: var(--accent); }
-.searchbar #modeToggle.active {
-  background: linear-gradient(135deg, var(--accent), #5b3ee0); color: #fff; border-color: transparent;
-}
 
 /* ============ 狀態列 / Meta ============ */
 .status {
@@ -213,19 +205,14 @@ footer.legal a { color: var(--muted); }
 
 <header class="hero">
   <div class="logo"><span class="mark">◉</span><span class="name">Andy 線上影音資源擷取器</span></div>
-  <div class="tagline">貼上網址自動掃描；遇到反爬蟲網站可改貼整段 HTML 原始碼</div>
+  <div class="tagline">貼上網址自動掃描；遇到反爬蟲網站請用下方書籤工具</div>
 </header>
 
 <div class="searchbar">
   <input id="url" type="url" autocomplete="off" spellcheck="false"
-    placeholder="貼上網址，或點右邊「貼 HTML」改成貼原始碼模式">
-  <button id="modeToggle" type="button" title="切換成貼 HTML 模式">📋</button>
+    placeholder="貼上影片頁面網址，例如 https://example.com/article">
   <button id="go">擷取</button>
 </div>
-<textarea id="htmlInput" style="display:none; width:100%; min-height:180px; margin-top:10px;
-  background:var(--panel); color:var(--text); border:1px solid var(--line);
-  border-radius:14px; padding:14px; font-family:ui-monospace,Menlo,monospace; font-size:12px;
-  resize:vertical;" placeholder="貼上整段 HTML 原始碼（瀏覽器右鍵「檢視網頁原始碼」全選複製）"></textarea>
 
 <div id="bookmarklet-box" style="margin-top:14px; padding:14px 16px; border:1px dashed var(--line); border-radius:12px; font-size:13px; color:var(--muted); background:var(--panel);">
   <div style="margin-bottom:8px;">
@@ -275,25 +262,7 @@ const els = {
   results: $('results'), meta: $('meta'),
   metaThumb: $('metaThumb'), metaTitle: $('metaTitle'), metaSrc: $('metaSrc'),
   themeToggle: $('themeToggle'),
-  modeToggle: $('modeToggle'), htmlInput: $('htmlInput'),
 };
-
-/* ---------- 兩種輸入模式：URL 或 HTML 原始碼 ---------- */
-let htmlMode = false;
-function setHtmlMode(on) {
-  htmlMode = on;
-  els.modeToggle.classList.toggle('active', on);
-  els.modeToggle.title = on ? '改回貼網址模式' : '切換成貼 HTML 模式';
-  els.url.style.display = on ? 'none' : '';
-  els.htmlInput.style.display = on ? 'block' : 'none';
-  if (on) setTimeout(() => els.htmlInput.focus(), 0);
-  else els.url.focus();
-}
-els.modeToggle.addEventListener('click', () => setHtmlMode(!htmlMode));
-// 在 HTML textarea 按 Cmd/Ctrl+Enter 觸發掃描
-els.htmlInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) run();
-});
 
 /* ---------- 書籤工具：用使用者瀏覽器在目標頁面 origin 跑，繞過反爬蟲 ----------
  * 點書籤時：
@@ -722,32 +691,6 @@ async function tryExtractApi(targetUrl) {
 let running = false;
 async function run() {
   if (running) return;
-
-  // HTML 直貼模式：跳過所有抓取邏輯，直接 scan
-  if (htmlMode) {
-    const html = els.htmlInput.value.trim();
-    if (!html) { setStatus('請貼上 HTML 原始碼', true); return; }
-    running = true; els.go.disabled = true;
-    clearResults();
-    setStatus('掃描貼上的 HTML…', false, true);
-    try {
-      // 沒有 baseUrl 就只能用 absolute URL；相對路徑會被略過
-      const baseUrl = html.match(/<base\s+href=["']([^"']+)/i)?.[1] || 'https://example.com/';
-      const { items, meta } = scanHtml(html, baseUrl);
-      if (meta) showMeta(meta);
-      if (!items.length) {
-        setStatus('在貼上的 HTML 裡找不到影音資源 😶', true);
-      } else {
-        setStatus('');
-        renderBuckets(items);
-      }
-    } catch (e) {
-      setStatus('掃描失敗：' + (e.message || e), true);
-    } finally {
-      running = false; els.go.disabled = false;
-    }
-    return;
-  }
 
   const raw = els.url.value.trim();
   if (!raw || !/^https?:\/\//i.test(raw)) {
