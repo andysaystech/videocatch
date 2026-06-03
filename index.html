@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Andy 線上影音資源擷取器</title>
+<meta name="description" content="貼上任意網址，自動掃描頁面內的影片與音訊資源，依檔案類型、解析度分區列出。">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* ============ 主題變數 ============ */
+:root[data-theme="dark"] {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1f232c;
+  --line: #2a2f3a;
+  --text: #e7ebf3;
+  --muted: #8b93a7;
+  --accent: #7c5cff;
+  --accent-2: #41d9c4;
+  --warn: #ffb454;
+  --shadow: 0 12px 40px rgba(0,0,0,.35);
+  --hero-gradient:
+    radial-gradient(1200px 600px at 80% -10%, rgba(124,92,255,.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(65,217,196,.12), transparent 60%);
+}
+:root[data-theme="light"] {
+  --bg: #f5f6fa;
+  --panel: #ffffff;
+  --panel-2: #f0f2f7;
+  --line: #e2e5ec;
+  --text: #1a1d24;
+  --muted: #6b7280;
+  --accent: #6d4cff;
+  --accent-2: #1faa97;
+  --warn: #c7791a;
+  --shadow: 0 6px 24px rgba(20,25,40,.08);
+  --hero-gradient:
+    radial-gradient(1200px 600px at 80% -10%, rgba(124,92,255,.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(65,217,196,.10), transparent 60%);
+}
+
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--text); }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+    "Noto Sans TC", "Microsoft JhengHei", Roboto, sans-serif;
+  line-height: 1.55;
+  min-height: 100vh;
+  background: var(--hero-gradient), var(--bg);
+  transition: background-color .2s, color .2s;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; position: relative; }
+
+/* ============ 主題切換按鈕 ============ */
+.theme-toggle {
+  position: absolute; top: 20px; right: 20px;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--line);
+  color: var(--text); cursor: pointer; font-size: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform .15s, border-color .15s;
+}
+.theme-toggle:hover { transform: rotate(15deg); border-color: var(--accent); }
+
+/* ============ Hero ============ */
+header.hero { text-align: center; margin-bottom: 28px; }
+.logo {
+  display: inline-flex; align-items: baseline; gap: 10px;
+  font-weight: 800; letter-spacing: -0.01em;
+  flex-wrap: wrap; justify-content: center;
+}
+.logo .mark {
+  font-size: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.logo .name { font-size: 26px; }
+@media (max-width: 480px) {
+  .logo .name { font-size: 20px; }
+}
+.tagline { color: var(--muted); margin-top: 6px; font-size: 14px; }
+
+/* ============ 搜尋列 ============ */
+.searchbar {
+  display: flex; gap: 10px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 14px;
+  padding: 10px; box-shadow: var(--shadow);
+}
+.searchbar input {
+  flex: 1; background: transparent; border: 0; outline: 0;
+  color: var(--text); font-size: 16px; padding: 12px;
+}
+.searchbar input::placeholder { color: var(--muted); opacity: .7; }
+.searchbar button {
+  background: linear-gradient(135deg, var(--accent), #5b3ee0);
+  color: #fff; border: 0; border-radius: 10px;
+  padding: 0 22px; font-weight: 600; cursor: pointer;
+  transition: transform .08s ease, opacity .15s;
+}
+.searchbar button:hover { transform: translateY(-1px); }
+.searchbar button:disabled { opacity: .6; cursor: progress; transform: none; }
+
+/* ============ 狀態列 / Meta ============ */
+.status {
+  margin-top: 22px; padding: 14px 16px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--panel);
+  color: var(--muted); font-size: 14px; display: none;
+}
+.status.show { display: block; }
+.status.err { border-color: rgba(255,107,107,.4); color: #d4525c; background: rgba(255,107,107,.08); }
+.status .spin {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--accent); border-top-color: transparent;
+  animation: spin .9s linear infinite; vertical-align: -2px; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.meta {
+  display: flex; gap: 16px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; padding: 14px; margin-top: 22px;
+}
+.meta img {
+  width: 120px; height: 68px; object-fit: cover;
+  border-radius: 8px; background: #000;
+}
+.meta .title { font-weight: 600; }
+.meta .src { color: var(--muted); font-size: 12px; word-break: break-all; }
+
+/* ============ 結果分區 ============ */
+section.bucket {
+  margin-top: 26px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 14px;
+  overflow: hidden;
+}
+.bucket header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.bucket header .dot { width: 10px; height: 10px; border-radius: 50%; }
+.bucket.video header .dot { background: var(--accent); }
+.bucket.audio header .dot { background: var(--accent-2); }
+.bucket.other header .dot { background: var(--warn); }
+.bucket header .name { font-weight: 700; letter-spacing: .02em; }
+.bucket header .count { margin-left: auto; color: var(--muted); font-size: 13px; }
+
+ul.items { list-style: none; padding: 0; margin: 0; }
+ul.items li {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 14px;
+  align-items: center; padding: 12px 18px; border-top: 1px solid var(--line);
+}
+ul.items li:first-child { border-top: 0; }
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .03em;
+  border: 1px solid var(--line); color: var(--muted); background: var(--panel-2);
+}
+.tag.res { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 35%, var(--line)); }
+.tag.fmt { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.tag.stream { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--line)); }
+.row-main { min-width: 0; }
+.row-url {
+  display: block; color: var(--muted); font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 4px;
+}
+.row-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.row-actions { display: flex; gap: 8px; }
+.btn {
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--text); border-radius: 8px; padding: 7px 12px;
+  font-size: 13px; cursor: pointer; text-decoration: none;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), #5b3ee0);
+  border-color: transparent; color: #fff;
+}
+.btn.primary:hover { color: #fff; opacity: .92; }
+
+footer.legal {
+  margin-top: 40px; color: var(--muted); font-size: 12px;
+  text-align: center; line-height: 1.8;
+}
+footer.legal a { color: var(--muted); }
+
+@media (max-width: 600px) {
+  .wrap { padding: 70px 16px 60px; }
+  .searchbar { flex-direction: column; }
+  .searchbar button { padding: 14px; }
+  ul.items li { grid-template-columns: 1fr; }
+  .row-actions { justify-content: flex-start; }
+  .meta img { width: 88px; height: 50px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<button class="theme-toggle" id="themeToggle" title="切換主題" aria-label="切換主題">🌙</button>
+
+<header class="hero">
+  <div class="logo"><span class="mark">◉</span><span class="name">Andy 線上影音資源擷取器</span></div>
+  <div class="tagline">貼上任意網址，自動掃描頁面內的影片與音訊資源</div>
+</header>
+
+<div class="searchbar">
+  <input id="url" type="url" autocomplete="off" spellcheck="false"
+    placeholder="貼上影片頁面網址，例如 https://example.com/article">
+  <button id="go">擷取</button>
+</div>
+
+<div id="status" class="status"></div>
+<div id="meta" class="meta" style="display:none">
+  <img id="metaThumb" alt="">
+  <div>
+    <div id="metaTitle" class="title"></div>
+    <div id="metaSrc" class="src"></div>
+  </div>
+</div>
+
+<div id="results"></div>
+
+<footer class="legal">
+  本工具於前端解析頁面公開資源。所有檔案位於第三方伺服器，本站不存放任何內容。請尊重原作者智慧財產權，下載內容僅限個人使用。
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+ * VidGrab — 純前端版
+ *   1) 直接 fetch 目標頁面（同源 / 開放 CORS 的站可成功）
+ *   2) 失敗 → 透過自架 CORS proxy
+ *   3) 在前端 DOM scan：<video>/<source>/og:video/JSON-LD/直連檔
+ *   4) 分類成 影片區 / 音訊區 / 其他
+ * ============================================================ */
+
+// ←─── 改成你部署的 Cloudflare Worker 網址 ───→
+const CORS_PROXY = 'https://vidgrab-proxy.your-subdomain.workers.dev/?url=';
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  url: $('url'), go: $('go'), status: $('status'),
+  results: $('results'), meta: $('meta'),
+  metaThumb: $('metaThumb'), metaTitle: $('metaTitle'), metaSrc: $('metaSrc'),
+  themeToggle: $('themeToggle'),
+};
+
+/* ---------- 主題 ---------- */
+const THEME_KEY = 'vidgrab.theme';
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  els.themeToggle.textContent = t === 'dark' ? '🌙' : '☀️';
+}
+applyTheme(localStorage.getItem(THEME_KEY) ||
+  (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+els.themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
+/* ---------- 副檔名分類 ---------- */
+const VIDEO_EXT = ['mp4','webm','mov','mkv','m4v','avi','flv','3gp','ts'];
+const AUDIO_EXT = ['mp3','m4a','aac','flac','wav','ogg','opus','weba'];
+const STREAM_EXT = ['m3u8','mpd'];
+const SUBTITLE_EXT = ['vtt','srt','ass'];
+
+function extOf(url) {
+  try {
+    const u = new URL(url, 'https://x/');
+    const m = u.pathname.toLowerCase().match(/\.([a-z0-9]{2,5})(?:$|[/?#])/);
+    return m ? m[1] : '';
+  } catch { return ''; }
+}
+function classify(url, hintMime) {
+  const e = extOf(url);
+  const mime = (hintMime || '').toLowerCase();
+  if (STREAM_EXT.includes(e) || mime.includes('mpegurl') || mime.includes('dash+xml'))
+    return { kind: 'video', stream: true, ext: e };
+  if (VIDEO_EXT.includes(e) || mime.startsWith('video/'))
+    return { kind: 'video', stream: false, ext: e };
+  if (AUDIO_EXT.includes(e) || mime.startsWith('audio/'))
+    return { kind: 'audio', stream: false, ext: e };
+  if (SUBTITLE_EXT.includes(e))
+    return { kind: 'other', stream: false, ext: e, sub: true };
+  return null;
+}
+
+/* ---------- UI 工具 ---------- */
+function setStatus(msg, isErr = false, spin = false) {
+  if (!msg) { els.status.classList.remove('show'); els.status.textContent = ''; return; }
+  els.status.classList.add('show');
+  els.status.classList.toggle('err', isErr);
+  els.status.innerHTML = (spin ? '<span class="spin"></span>' : '') + msg;
+}
+function clearResults() {
+  els.results.innerHTML = '';
+  els.meta.style.display = 'none';
+}
+function showMeta({ title, thumb, source }) {
+  if (!title && !thumb) return;
+  els.meta.style.display = 'flex';
+  els.metaThumb.src = thumb || '';
+  els.metaThumb.style.display = thumb ? '' : 'none';
+  els.metaTitle.textContent = title || '(未取得標題)';
+  els.metaSrc.textContent = source || '';
+}
+function fmtSize(bytes) {
+  if (!bytes || bytes < 0) return '';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0, n = bytes;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(n >= 10 || i === 0 ? 0 : 1) + ' ' + u[i];
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ---------- 渲染結果 ---------- */
+function renderBuckets(items) {
+  const buckets = { video: [], audio: [], other: [] };
+  for (const it of items) buckets[it.kind || 'other'].push(it);
+
+  buckets.video.sort((a, b) => (b.height || b.bitrate || 0) - (a.height || a.bitrate || 0));
+  buckets.audio.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+
+  const html = [];
+  const def = [
+    { key: 'video', label: '影片區' },
+    { key: 'audio', label: '音訊區' },
+    { key: 'other', label: '字幕 / 其他' },
+  ];
+  for (const { key, label } of def) {
+    const arr = buckets[key];
+    if (!arr.length) continue;
+    html.push(`<section class="bucket ${key}">
+      <header><span class="dot"></span><span class="name">${label}</span>
+        <span class="count">${arr.length} 項</span></header>
+      <ul class="items">`);
+    for (const it of arr) html.push(renderItem(it));
+    html.push(`</ul></section>`);
+  }
+  if (!html.length) {
+    setStatus('在這個頁面找不到任何影音資源 😶 試試換個網址。', true);
+    return;
+  }
+  els.results.innerHTML = html.join('');
+}
+function renderItem(it) {
+  const tags = [];
+  if (it.height) tags.push(`<span class="tag res">${it.height}p</span>`);
+  else if (it.resolution) tags.push(`<span class="tag res">${escapeHtml(it.resolution)}</span>`);
+  if (it.ext) tags.push(`<span class="tag fmt">${escapeHtml(it.ext.toUpperCase())}</span>`);
+  if (it.stream) tags.push(`<span class="tag stream">串流</span>`);
+  if (it.bitrate) tags.push(`<span class="tag">${Math.round(it.bitrate)}k</span>`);
+  if (it.size) tags.push(`<span class="tag">${fmtSize(it.size)}</span>`);
+
+  const label = it.label || (it.kind === 'audio' ? '音訊' : '影片');
+  const dl = it.stream
+    ? `<button class="btn" data-copy="${escapeHtml(it.url)}">複製串流網址</button>`
+    : `<a class="btn primary" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer" download>下載</a>`;
+  return `<li>
+    <div class="row-tags">${tags.join('')}</div>
+    <div class="row-main">
+      <div>${escapeHtml(label)}</div>
+      <a class="row-url" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(it.url)}</a>
+    </div>
+    <div class="row-actions">
+      <button class="btn" data-copy="${escapeHtml(it.url)}">複製</button>
+      ${dl}
+    </div>
+  </li>`;
+}
+els.results.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-copy]');
+  if (!btn) return;
+  navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+    const old = btn.textContent; btn.textContent = '✓ 已複製';
+    setTimeout(() => btn.textContent = old, 1200);
+  });
+});
+
+/* ---------- 抓 HTML（先直連、再走 proxy） ---------- */
+async function fetchHtml(targetUrl) {
+  try {
+    const r = await fetch(targetUrl, { redirect: 'follow' });
+    if (r.ok) return await r.text();
+  } catch (_) { /* fall through */ }
+  const proxied = CORS_PROXY + encodeURIComponent(targetUrl);
+  const r = await fetch(proxied);
+  if (!r.ok) throw new Error('proxy 回應 ' + r.status);
+  return await r.text();
+}
+
+function absoluteUrl(href, base) {
+  try { return new URL(href, base).toString(); } catch { return null; }
+}
+
+/* ---------- 掃描 HTML ---------- */
+function scanHtml(html, baseUrl) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const baseTag = doc.querySelector('base[href]');
+  const base = baseTag ? absoluteUrl(baseTag.getAttribute('href'), baseUrl) || baseUrl : baseUrl;
+
+  const found = new Map();
+  const add = (rawUrl, hint = {}) => {
+    const url = absoluteUrl(rawUrl, base);
+    if (!url || !/^https?:/i.test(url)) return;
+    if (found.has(url)) {
+      const cur = found.get(url);
+      for (const k of Object.keys(hint)) if (!cur[k] && hint[k]) cur[k] = hint[k];
+      return;
+    }
+    const cls = classify(url, hint.mime);
+    if (!cls) return;
+    found.set(url, {
+      kind: cls.kind, stream: cls.stream, ext: cls.ext,
+      url, label: hint.label || '',
+      height: hint.height || 0, bitrate: hint.bitrate || 0, size: 0,
+    });
+  };
+
+  // <video>, <audio>, <source>, <track>
+  doc.querySelectorAll('video[src], audio[src]').forEach(el => {
+    add(el.getAttribute('src'), {
+      mime: el.getAttribute('type') || '',
+      label: el.getAttribute('title') || el.tagName.toLowerCase(),
+    });
+  });
+  doc.querySelectorAll('source[src]').forEach(el => {
+    add(el.getAttribute('src'), {
+      mime: el.getAttribute('type') || '',
+      label: el.getAttribute('label') || el.getAttribute('title') || '',
+      height: parseInt(el.getAttribute('size') || el.getAttribute('height') || 0, 10) || 0,
+    });
+  });
+  doc.querySelectorAll('track[src]').forEach(el =>
+    add(el.getAttribute('src'), { label: el.getAttribute('label') || 'subtitle' }));
+
+  // og:video / twitter:player / og:audio
+  doc.querySelectorAll('meta[property], meta[name]').forEach(el => {
+    const k = (el.getAttribute('property') || el.getAttribute('name') || '').toLowerCase();
+    const v = el.getAttribute('content');
+    if (!v) return;
+    if (/(?:og:video|og:audio|twitter:player:stream|twitter:player)/.test(k))
+      add(v, { mime: el.getAttribute('type') || '', label: k });
+  });
+
+  // JSON-LD VideoObject
+  doc.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
+    try {
+      const json = JSON.parse(s.textContent);
+      const list = Array.isArray(json) ? json : [json];
+      for (const obj of list) walkLd(obj, add);
+    } catch (_) {}
+  });
+
+  // regex 掃整頁
+  const re = /https?:\/\/[^\s"'<>]+\.(?:mp4|webm|mov|mkv|m4v|ts|m3u8|mpd|mp3|m4a|aac|flac|wav|ogg|opus|weba)(?:\?[^\s"'<>]*)?/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) add(m[0]);
+
+  // inline <script> 內常見鍵名
+  doc.querySelectorAll('script:not([src])').forEach(s => {
+    const t = s.textContent || '';
+    const reKey = /"(?:hlsManifestUrl|dashManifestUrl|playableUrl|baseUrl|file|src|url|contentUrl)"\s*:\s*"([^"]+)"/g;
+    let mm;
+    while ((mm = reKey.exec(t)) !== null) {
+      const u = mm[1].replace(/\\u002F/g, '/').replace(/\\\//g, '/');
+      add(u);
+    }
+  });
+
+  // iframe 提示
+  const iframes = [];
+  doc.querySelectorAll('iframe[src]').forEach(el => {
+    const u = absoluteUrl(el.getAttribute('src'), base);
+    if (u && /^https?:/i.test(u)) iframes.push(u);
+  });
+
+  const title = (doc.querySelector('meta[property="og:title"]')?.content
+    || doc.querySelector('title')?.textContent || '').trim();
+  const thumb = doc.querySelector('meta[property="og:image"]')?.content
+    || doc.querySelector('meta[name="twitter:image"]')?.content || '';
+
+  return {
+    items: Array.from(found.values()),
+    meta: { title, thumb: absoluteUrl(thumb, base) || '', source: baseUrl },
+    iframes,
+  };
+}
+function walkLd(obj, add) {
+  if (!obj || typeof obj !== 'object') return;
+  const type = obj['@type'];
+  if (type && /(?:VideoObject|AudioObject|MediaObject)/.test(String(type))) {
+    if (obj.contentUrl) add(obj.contentUrl, { mime: obj.encodingFormat || '', label: obj.name || '' });
+    if (obj.embedUrl) add(obj.embedUrl, { label: obj.name || '' });
+  }
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (v && typeof v === 'object') walkLd(v, add);
+  }
+}
+
+/* ---------- 探測檔案大小（透過 proxy 發 HEAD） ---------- */
+async function probeSizes(items) {
+  const tasks = items.slice(0, 25).map(async (it) => {
+    if (it.stream || it.size) return;
+    try {
+      const r = await fetch(CORS_PROXY + encodeURIComponent(it.url), { method: 'HEAD' });
+      const len = r.headers.get('content-length');
+      if (len) it.size = parseInt(len, 10);
+    } catch (_) {}
+  });
+  await Promise.all(tasks);
+}
+
+/* ---------- 主流程 ---------- */
+let running = false;
+async function run() {
+  if (running) return;
+  const raw = els.url.value.trim();
+  if (!raw || !/^https?:\/\//i.test(raw)) {
+    setStatus('請輸入完整網址（要包含 https://）', true); return;
+  }
+  running = true;
+  els.go.disabled = true;
+  clearResults();
+  setStatus('解析中…', false, true);
+
+  try {
+    const html = await fetchHtml(raw);
+    const { items, meta, iframes } = scanHtml(html, raw);
+    if (meta) showMeta(meta);
+
+    if (items.length === 0) {
+      if (iframes.length) {
+        setStatus('頁面本身沒有直接資源，但偵測到 ' + iframes.length
+          + ' 個 iframe。複製下方任一個再貼回來試試：<br>'
+          + iframes.slice(0, 5).map(u =>
+              `<a href="#" data-iframe="${escapeHtml(u)}">${escapeHtml(u)}</a>`).join('<br>'),
+          true);
+        els.status.querySelectorAll('[data-iframe]').forEach(a =>
+          a.addEventListener('click', (e) => {
+            e.preventDefault(); els.url.value = a.dataset.iframe; run();
+          }));
+      } else {
+        setStatus('在這個頁面找不到任何影音資源 😶', true);
+      }
+      return;
+    }
+
+    setStatus('探測檔案大小…', false, true);
+    await probeSizes(items);
+    setStatus('');
+    renderBuckets(items);
+  } catch (e) {
+    console.error(e);
+    setStatus('解析失敗：' + (e.message || e), true);
+  } finally {
+    running = false;
+    els.go.disabled = false;
+  }
+}
+
+els.go.addEventListener('click', run);
+els.url.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
+els.url.addEventListener('paste', () => setTimeout(() => { if (els.url.value.trim()) run(); }, 0));
+els.url.addEventListener('click', () => els.url.select());
+</script>
+</body>
+</html>
