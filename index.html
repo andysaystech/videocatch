@@ -243,12 +243,13 @@ footer.legal a { color: var(--muted); }
     <div style="margin-bottom:10px;">手機 Safari 沒辦法拖書籤，改用 iOS 內建的「捷徑」app 達到一樣效果，從分享選單呼叫。</div>
     <ol style="padding-left:22px; margin:8px 0;">
       <li>開啟「<strong>捷徑</strong>」app → 右上角「<strong>+</strong>」新增捷徑</li>
-      <li>搜尋「<strong>在網頁上執行 JavaScript</strong>」加入</li>
-      <li>點下方按鈕複製程式碼，貼到 JavaScript 欄位</li>
+      <li>搜尋「<strong>在網頁上執行 JavaScript</strong>」加入 → 點下方按鈕複製程式碼，貼到 JavaScript 欄位</li>
+      <li><strong style="color:var(--warn);">⚠️ 關鍵步驟：</strong>再搜尋「<strong>打開 URL</strong>」加入到下方，URL 欄位選變數「<strong>JavaScript 結果</strong>」（少這步分享後不會有反應）</li>
       <li>命名為「<strong>抓影音</strong>」</li>
-      <li>「ⓘ 詳細資訊」→ 打開「<strong>在分享表單中顯示</strong>」</li>
+      <li>「ⓘ 詳細資訊」→ 打開「<strong>在分享表單中顯示</strong>」，「接受」勾選「<strong>Safari 網頁</strong>」</li>
       <li>在 Safari 任何影片頁 → 分享 → 抓影音 ✅</li>
     </ol>
+    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">捷徑動作順序應為：<strong>1. 在網頁上執行 JavaScript</strong> → <strong>2. 打開 URL（JavaScript 結果）</strong></div>
     <button id="copy-ios-shortcut" style="background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border:0; border-radius:8px; padding:8px 14px; font-weight:600; cursor:pointer; font-size:13px; margin-top:4px;">📋 複製 iOS 捷徑程式碼</button>
     <textarea id="ios-shortcut-code" readonly style="display:block; width:100%; height:80px; margin-top:10px; padding:10px; background:var(--panel-2); color:var(--muted); border:1px solid var(--line); border-radius:8px; font-family:ui-monospace,Menlo,monospace; font-size:11px; resize:vertical;"></textarea>
   </div>
@@ -345,7 +346,8 @@ document.getElementById('bookmarklet').setAttribute('href', bookmarkletHref);
  * 函式，呼叫它把回傳值送回給下一個 Shortcut 動作。我們回傳目標網址，
  * 使用者後續手動串接「打開 URL」動作，或直接把整段腳本貼進去當唯一動作
  * （Safari 會用該回傳值當輸出，下一步用「打開 URL」開啟）。 */
-const iosShortcutSource = `(async () => {
+const iosShortcutSource = `function runGrab(completion){
+ try {
   const found = new Map();
   const add = (u, hint) => {
     try { u = new URL(u, location.href).toString(); } catch (e) { return; }
@@ -370,7 +372,11 @@ const iosShortcutSource = `(async () => {
   };
   const data = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
   completion(${JSON.stringify(location.origin + location.pathname)} + '#grab=' + data);
-})();`;
+ } catch (err) {
+  completion(${JSON.stringify(location.origin + location.pathname)} + '#err=' + encodeURIComponent(String(err && err.message || err)));
+ }
+}
+runGrab(completion);`;
 document.getElementById('ios-shortcut-code').value = iosShortcutSource;
 document.getElementById('copy-ios-shortcut').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
