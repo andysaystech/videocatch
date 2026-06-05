@@ -194,6 +194,51 @@ ul.items li:first-child { border-top: 0; }
 }
 .btn.primary:hover { color: #fff; opacity: .92; }
 
+/* ============ 說明區（電腦/手機書籤教學） ============ */
+#bookmarklet-box, #mobile-help {
+  margin-top: 14px; padding: 18px 20px;
+  border: 1px dashed var(--line); border-radius: 12px;
+  background: var(--panel); color: var(--muted);
+  font-size: clamp(15px, 1.05vw + 12px, 17px);
+  line-height: 1.7;
+}
+#mobile-help { margin-top: 10px; }
+#mobile-help > summary {
+  cursor: pointer; user-select: none;
+  color: var(--text); font-weight: 700;
+  font-size: clamp(15px, 1.05vw + 12px, 17px);
+}
+.help-title { margin-bottom: 12px; }
+.help-title strong, .help-h { color: var(--text); }
+.help-h { font-weight: 700; margin-bottom: 8px; }
+.help-p { margin-bottom: 6px; }
+.help-section {
+  margin-top: 18px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+#mobile-help ol { padding-left: 24px; margin: 10px 0; }
+#mobile-help ol li { margin-bottom: 8px; }
+.bm-link {
+  display: inline-block; padding: 6px 14px; margin: 0 2px;
+  background: linear-gradient(135deg, var(--accent), #5b3ee0);
+  color: #fff; border-radius: 6px; font-weight: 600; text-decoration: none;
+}
+.copy-bm {
+  margin-top: 8px;
+  background: linear-gradient(135deg, var(--accent), #5b3ee0);
+  color: #fff; border: 0; border-radius: 8px;
+  padding: 10px 16px; font-weight: 600; cursor: pointer;
+  font-size: 14px;
+}
+.copy-bm:hover { opacity: .92; }
+.help-warn {
+  font-size: .9em; margin-top: 8px; padding: 10px 12px;
+  background: var(--panel-2); border-radius: 8px;
+}
+.help-warn code, .help-p code, #mobile-help code {
+  background: var(--panel-2); padding: 1px 6px; border-radius: 4px;
+}
+
 footer.legal {
   margin-top: 40px; color: var(--muted); font-size: 12px;
   text-align: center; line-height: 1.8;
@@ -226,46 +271,43 @@ footer.legal a { color: var(--muted); }
   <button id="go">擷取</button>
 </div>
 
-<div id="bookmarklet-box" style="margin-top:14px; padding:14px 16px; border:1px dashed var(--line); border-radius:12px; font-size:13px; color:var(--muted); background:var(--panel);">
-  <div style="margin-bottom:10px;">
-    <strong style="color:var(--text);">如果網站影片解析不出來，請嘗試以下方法：</strong>
-  </div>
+<div id="bookmarklet-box">
+  <div class="help-title"><strong>如果網站影片解析不出來，請嘗試以下方法：</strong></div>
 
-  <div style="font-weight:700; color:var(--text); margin-bottom:6px;">💻 電腦版</div>
-  <div style="margin-bottom:6px;">
-    把這個連結 <a id="bookmarklet" href="#" style="display:inline-block; padding:5px 12px; background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border-radius:6px; font-weight:600; text-decoration:none; margin:0 2px;">📥 Andy 線上影音資源擷取器增強版</a> <strong>拖曳到書籤列</strong>，之後任何網頁要抓影片時，直接點這個書籤，就會自動把該頁的影音連結帶回本站列出。
+  <div class="help-h">💻 電腦版</div>
+  <div class="help-p">
+    把這個連結 <a id="bookmarklet" href="#" class="bm-link">📥 Andy 線上影音資源擷取器增強版</a> <strong>拖曳到書籤列</strong>，之後任何網頁要抓影片時，直接點這個書籤，就會自動把該頁的影音連結帶回本站列出。
   </div>
 </div>
 
-<details id="mobile-help" style="margin-top:10px; padding:14px 16px; border:1px dashed var(--line); border-radius:12px; font-size:13px; color:var(--muted); background:var(--panel);">
-  <summary style="cursor:pointer; user-select:none; color:var(--text); font-weight:600;">📱 手機版使用方法</summary>
+<details id="mobile-help">
+  <summary>📱 手機版使用方法</summary>
 
-  <button id="copy-bookmarklet-code" style="display:block; margin-top:14px; background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border:0; border-radius:8px; padding:9px 14px; font-weight:600; cursor:pointer; font-size:13px;">📋 複製 javascript: 程式碼</button>
-  <textarea id="bookmarklet-code" readonly onclick="this.select()" style="display:block; width:100%; height:80px; margin-top:8px; padding:10px; background:var(--panel-2); color:var(--muted); border:1px solid var(--line); border-radius:8px; font-family:ui-monospace,Menlo,monospace; font-size:11px; resize:vertical; word-break:break-all;"></textarea>
-
-  <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">
-    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🍎 iPhone / iPad — 用 Safari 編輯書籤</div>
-    <ol style="padding-left:22px; margin:8px 0;">
-      <li>用 Safari 開啟本站，點上方按鈕<strong>複製這段程式碼</strong></li>
+  <div class="help-section">
+    <div class="help-h">🍎 iPhone / iPad — 用 Safari 編輯書籤</div>
+    <ol>
+      <li>用 Safari 開啟本站，點這顆按鈕複製程式碼：<br><button class="copy-bm">📋 複製 javascript: 程式碼</button></li>
       <li>Safari 下方點分享鈕 􀈂 → 「<strong>加入書籤</strong>」→ 儲存</li>
       <li>點書籤圖示 􀉜 → 右下「<strong>編輯</strong>」→ 點剛剛那個書籤</li>
       <li>下面網址欄<strong>全選刪掉</strong>，<strong>貼上</strong>剛複製的程式碼 → 完成</li>
       <li>之後在任何影片頁，點書籤 􀉜 → 點「<strong>Andy 線上影音資源擷取器</strong>」即可 ✅</li>
     </ol>
-    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">⚠️ 貼上後確認網址欄是 <code>javascript:</code> 開頭。若被 Safari 吃掉，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
+    <div class="help-warn">⚠️ 貼上後確認網址欄是 <code>javascript:</code> 開頭。若被 Safari 吃掉，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
   </div>
 
-  <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">
-    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🤖 Android — 用 Firefox 編輯書籤</div>
-    <ol style="padding-left:22px; margin:8px 0;">
-      <li>從 Play Store 安裝 <strong>Firefox</strong>，用它開啟本站，點上方按鈕<strong>複製程式碼</strong></li>
+  <div class="help-section">
+    <div class="help-h">🤖 Android — 用 Firefox 編輯書籤</div>
+    <ol>
+      <li>從 Play Store 安裝 <strong>Firefox</strong>，用它開啟本站，點這顆按鈕複製程式碼：<br><button class="copy-bm">📋 複製 javascript: 程式碼</button></li>
       <li>Firefox 右下「<strong>⋮</strong>」→ 點書籤圖示「<strong>加入書籤</strong>」存下這一頁</li>
       <li>再開「<strong>⋮</strong>」→「<strong>書籤</strong>」→ <strong>長按</strong>剛存的書籤 →「<strong>編輯</strong>」</li>
       <li>網址欄<strong>全選刪掉</strong>，<strong>貼上</strong>程式碼 → 儲存</li>
       <li>之後在任何影片頁，開「⋮ → 書籤」點「<strong>Andy 線上影音資源擷取器</strong>」即可 ✅</li>
     </ol>
-    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">⚠️ 貼上後確認網址欄是 <code>javascript:</code> 開頭。若被 Firefox 吃掉，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
+    <div class="help-warn">⚠️ 貼上後確認網址欄是 <code>javascript:</code> 開頭。若被 Firefox 吃掉，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
   </div>
+
+  <textarea id="bookmarklet-code" readonly aria-hidden="true" tabindex="-1" style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0;"></textarea>
 </details>
 
 <div id="status" class="status"></div>
@@ -347,18 +389,20 @@ document.getElementById('bookmarklet').setAttribute('href', bookmarkletHref);
  * iOS Safari 不能拖書籤，但可「先存書籤 → 編輯 → 把網址換成這段 javascript:」達成。
  * 這裡顯示的就是桌面拖曳用的同一串 bookmarkletHref。 */
 document.getElementById('bookmarklet-code').value = bookmarkletHref;
-document.getElementById('copy-bookmarklet-code').addEventListener('click', async (e) => {
-  const btn = e.currentTarget;
-  const old = btn.textContent;
-  try {
-    await navigator.clipboard.writeText(bookmarkletHref);
-    btn.textContent = '✓ 已複製，去貼進書籤網址欄';
-  } catch (_) {
-    const ta = document.getElementById('bookmarklet-code');
-    ta.select(); document.execCommand('copy');
-    btn.textContent = '✓ 已複製';
-  }
-  setTimeout(() => btn.textContent = old, 2500);
+document.querySelectorAll('.copy-bm').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const old = btn.textContent;
+    try {
+      await navigator.clipboard.writeText(bookmarkletHref);
+      btn.textContent = '✓ 已複製，去貼進書籤網址欄';
+    } catch (_) {
+      const ta = document.getElementById('bookmarklet-code');
+      ta.style.left = '0'; ta.select(); document.execCommand('copy');
+      ta.style.left = '-9999px';
+      btn.textContent = '✓ 已複製';
+    }
+    setTimeout(() => { btn.textContent = old; }, 2500);
+  });
 });
 
 /* 載入時若 URL 有 #grab=... 直接從書籤帶來的結果 render */
