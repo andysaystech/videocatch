@@ -217,7 +217,7 @@ footer.legal a { color: var(--muted); }
 
 <header class="hero">
   <div class="logo"><span class="mark">◉</span><span class="name">Andy 線上影音資源擷取器</span></div>
-  <div class="tagline">貼上網址自動掃描；遇到反爬蟲網站請用下方書籤工具</div>
+  <div class="tagline">貼上網址自動掃描；解析不出來時，請用下方書籤工具</div>
 </header>
 
 <div class="searchbar">
@@ -227,44 +227,44 @@ footer.legal a { color: var(--muted); }
 </div>
 
 <div id="bookmarklet-box" style="margin-top:14px; padding:14px 16px; border:1px dashed var(--line); border-radius:12px; font-size:13px; color:var(--muted); background:var(--panel);">
-  <div style="margin-bottom:8px;">
-    <strong style="color:var(--text);">🔖 反爬蟲網站的萬用解法 — 用書籤工具直接抓</strong>
+  <div style="margin-bottom:10px;">
+    <strong style="color:var(--text);">如果網站影片解析不出來，請嘗試以下方法：</strong>
   </div>
-  <div>
-    把右邊這個連結 <a id="bookmarklet" href="#" style="display:inline-block; padding:5px 12px; background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border-radius:6px; font-weight:600; text-decoration:none; margin:0 4px;">📥 抓影音</a> <strong>拖曳到書籤列</strong>（只要做一次）。之後在任何網頁（包含 eyny、登入後的 FB、IG）點這個書籤，會自動把該頁的影音連結帶回本站列出。
+
+  <div style="font-weight:700; color:var(--text); margin-bottom:6px;">💻 電腦版</div>
+  <div style="margin-bottom:6px;">
+    把這個連結 <a id="bookmarklet" href="#" style="display:inline-block; padding:5px 12px; background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border-radius:6px; font-weight:600; text-decoration:none; margin:0 2px;">📥 Andy 線上影音資源擷取器增強版</a> <strong>拖曳到書籤列</strong>，之後任何網頁要抓影片時，直接點這個書籤，就會自動把該頁的影音連結帶回本站列出。
   </div>
 </div>
 
 <details id="mobile-help" style="margin-top:10px; padding:14px 16px; border:1px dashed var(--line); border-radius:12px; font-size:13px; color:var(--muted); background:var(--panel);">
-  <summary style="cursor:pointer; user-select:none; color:var(--text); font-weight:600;">📱 手機版使用方法（iPhone 編輯書籤 / Android Firefox）</summary>
+  <summary style="cursor:pointer; user-select:none; color:var(--text); font-weight:600;">📱 手機版使用方法</summary>
 
-  <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--line);">
-    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🍎 iPhone / iPad — 編輯書籤法</div>
-    <div style="margin-bottom:10px;">手機 Safari 沒辦法「拖」書籤，但可以<strong>先存一個書籤、再把它的網址改成下面這段程式碼</strong>，效果一樣。只要做一次。</div>
+  <button id="copy-bookmarklet-code" style="display:block; margin-top:14px; background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border:0; border-radius:8px; padding:9px 14px; font-weight:600; cursor:pointer; font-size:13px;">📋 複製 javascript: 程式碼</button>
+  <textarea id="bookmarklet-code" readonly onclick="this.select()" style="display:block; width:100%; height:80px; margin-top:8px; padding:10px; background:var(--panel-2); color:var(--muted); border:1px solid var(--line); border-radius:8px; font-family:ui-monospace,Menlo,monospace; font-size:11px; resize:vertical; word-break:break-all;"></textarea>
+
+  <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">
+    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🍎 iPhone / iPad — 用 Safari 編輯書籤</div>
     <ol style="padding-left:22px; margin:8px 0;">
-      <li>點下方按鈕<strong>複製</strong>這段 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 程式碼</li>
-      <li>在 Safari <strong>隨便開一個網頁</strong> → 點分享鈕 􀈂 → 「<strong>加入書籤</strong>」→ 儲存（名稱先隨意）</li>
-      <li>點 Safari 的<strong>書籤圖示 􀉜</strong> → 右下「<strong>編輯</strong>」→ 點剛剛那個書籤</li>
-      <li>把名稱改成「<strong>抓影音</strong>」；<strong>下面那欄網址全選刪掉</strong>，<strong>貼上</strong>剛複製的程式碼 → 完成</li>
-      <li>之後在任何影片頁，點書籤 􀉜 → 點「<strong>抓影音</strong>」，就會把該頁影音帶回本站 ✅</li>
+      <li>用 Safari 開啟本站，點上方按鈕<strong>複製這段程式碼</strong></li>
+      <li>Safari 下方點分享鈕 􀈂 → 「<strong>加入書籤</strong>」→ 儲存</li>
+      <li>點書籤圖示 􀉜 → 右下「<strong>編輯</strong>」→ 點剛剛那個書籤</li>
+      <li>下面網址欄<strong>全選刪掉</strong>，<strong>貼上</strong>剛複製的程式碼 → 完成</li>
+      <li>之後在任何影片頁，點書籤 􀉜 → 點「<strong>Andy 線上影音資源擷取器</strong>」即可 ✅</li>
     </ol>
-    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">⚠️ 第 4 步貼上後，確認網址欄是 <code>javascript:</code> 開頭。若貼上時 Safari 把開頭吃掉了，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
-    <button id="copy-bookmarklet-code" style="background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border:0; border-radius:8px; padding:8px 14px; font-weight:600; cursor:pointer; font-size:13px; margin-top:4px;">📋 複製書籤程式碼</button>
-    <textarea id="bookmarklet-code" readonly onclick="this.select()" style="display:block; width:100%; height:90px; margin-top:10px; padding:10px; background:var(--panel-2); color:var(--muted); border:1px solid var(--line); border-radius:8px; font-family:ui-monospace,Menlo,monospace; font-size:11px; resize:vertical; word-break:break-all;"></textarea>
+    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">⚠️ 貼上後確認網址欄是 <code>javascript:</code> 開頭。若被 Safari 吃掉，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
   </div>
 
-  <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--line);">
+  <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">
     <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🤖 Android — 用 Firefox 編輯書籤</div>
-    <div style="margin-bottom:10px;">Chrome Android 不讓你建 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 開頭的書籤，必須改用 <strong>Firefox</strong>（或 Kiwi Browser）。做法跟 iPhone 一樣：先存書籤、再把網址換成上面那段程式碼。</div>
     <ol style="padding-left:22px; margin:8px 0;">
-      <li>從 Play Store 安裝 <strong>Firefox</strong>，用它開啟本站</li>
-      <li>複製上方的<strong>書籤程式碼</strong>（同一段，iPhone / Android 通用）</li>
-      <li>Firefox 右下「<strong>⋮</strong>」選單 → 點書籤圖示「<strong>加入書籤</strong>」存下這一頁</li>
+      <li>從 Play Store 安裝 <strong>Firefox</strong>，用它開啟本站，點上方按鈕<strong>複製程式碼</strong></li>
+      <li>Firefox 右下「<strong>⋮</strong>」→ 點書籤圖示「<strong>加入書籤</strong>」存下這一頁</li>
       <li>再開「<strong>⋮</strong>」→「<strong>書籤</strong>」→ <strong>長按</strong>剛存的書籤 →「<strong>編輯</strong>」</li>
-      <li>名稱改「<strong>抓影音</strong>」；<strong>網址欄全選刪掉</strong>，<strong>貼上</strong>程式碼 → 儲存</li>
-      <li>之後在任何影片頁，開「⋮ → 書籤」點「抓影音」即可 ✅</li>
+      <li>網址欄<strong>全選刪掉</strong>，<strong>貼上</strong>程式碼 → 儲存</li>
+      <li>之後在任何影片頁，開「⋮ → 書籤」點「<strong>Andy 線上影音資源擷取器</strong>」即可 ✅</li>
     </ol>
-    <div style="font-size:12px; margin-top:6px;">💡 貼上後確認網址是 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 開頭，被吃掉就手動補打。</div>
+    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">⚠️ 貼上後確認網址欄是 <code>javascript:</code> 開頭。若被 Firefox 吃掉，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
   </div>
 </details>
 
