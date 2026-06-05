@@ -236,33 +236,35 @@ footer.legal a { color: var(--muted); }
 </div>
 
 <details id="mobile-help" style="margin-top:10px; padding:14px 16px; border:1px dashed var(--line); border-radius:12px; font-size:13px; color:var(--muted); background:var(--panel);">
-  <summary style="cursor:pointer; user-select:none; color:var(--text); font-weight:600;">📱 手機版使用方法（iOS 捷徑 / Android Firefox）</summary>
+  <summary style="cursor:pointer; user-select:none; color:var(--text); font-weight:600;">📱 手機版使用方法（iPhone 編輯書籤 / Android Firefox）</summary>
 
   <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--line);">
-    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🍎 iPhone / iPad — 用「捷徑」</div>
-    <div style="margin-bottom:10px;">手機 Safari 沒辦法拖書籤，改用 iOS 內建的「捷徑」app 達到一樣效果，從分享選單呼叫。</div>
+    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🍎 iPhone / iPad — 編輯書籤法</div>
+    <div style="margin-bottom:10px;">手機 Safari 沒辦法「拖」書籤，但可以<strong>先存一個書籤、再把它的網址改成下面這段程式碼</strong>，效果一樣。只要做一次。</div>
     <ol style="padding-left:22px; margin:8px 0;">
-      <li>開啟「<strong>捷徑</strong>」app → 右上角「<strong>+</strong>」新增捷徑</li>
-      <li>搜尋「<strong>在網頁上執行 JavaScript</strong>」加入 → 點下方按鈕複製程式碼，貼到 JavaScript 欄位</li>
-      <li><strong style="color:var(--warn);">⚠️ 關鍵步驟：</strong>再搜尋「<strong>打開 URL</strong>」加入到下方，URL 欄位選變數「<strong>JavaScript 結果</strong>」（少這步分享後不會有反應）</li>
-      <li>命名為「<strong>抓影音</strong>」</li>
-      <li>「ⓘ 詳細資訊」→ 打開「<strong>在分享表單中顯示</strong>」，「接受」勾選「<strong>Safari 網頁</strong>」</li>
-      <li>在 Safari 任何影片頁 → 分享 → 抓影音 ✅</li>
+      <li>點下方按鈕<strong>複製</strong>這段 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 程式碼</li>
+      <li>在 Safari <strong>隨便開一個網頁</strong> → 點分享鈕 􀈂 → 「<strong>加入書籤</strong>」→ 儲存（名稱先隨意）</li>
+      <li>點 Safari 的<strong>書籤圖示 􀉜</strong> → 右下「<strong>編輯</strong>」→ 點剛剛那個書籤</li>
+      <li>把名稱改成「<strong>抓影音</strong>」；<strong>下面那欄網址全選刪掉</strong>，<strong>貼上</strong>剛複製的程式碼 → 完成</li>
+      <li>之後在任何影片頁，點書籤 􀉜 → 點「<strong>抓影音</strong>」，就會把該頁影音帶回本站 ✅</li>
     </ol>
-    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">捷徑動作順序應為：<strong>1. 在網頁上執行 JavaScript</strong> → <strong>2. 打開 URL（JavaScript 結果）</strong></div>
-    <button id="copy-ios-shortcut" style="background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border:0; border-radius:8px; padding:8px 14px; font-weight:600; cursor:pointer; font-size:13px; margin-top:4px;">📋 複製 iOS 捷徑程式碼</button>
-    <textarea id="ios-shortcut-code" readonly style="display:block; width:100%; height:80px; margin-top:10px; padding:10px; background:var(--panel-2); color:var(--muted); border:1px solid var(--line); border-radius:8px; font-family:ui-monospace,Menlo,monospace; font-size:11px; resize:vertical;"></textarea>
+    <div style="font-size:12px; margin-top:6px; padding:8px 10px; background:var(--panel-2); border-radius:6px;">⚠️ 第 4 步貼上後，確認網址欄是 <code>javascript:</code> 開頭。若貼上時 Safari 把開頭吃掉了，把游標移到最前面手動補打 <code>javascript:</code> 再存。</div>
+    <button id="copy-bookmarklet-code" style="background:linear-gradient(135deg,var(--accent),#5b3ee0); color:#fff; border:0; border-radius:8px; padding:8px 14px; font-weight:600; cursor:pointer; font-size:13px; margin-top:4px;">📋 複製書籤程式碼</button>
+    <textarea id="bookmarklet-code" readonly onclick="this.select()" style="display:block; width:100%; height:90px; margin-top:10px; padding:10px; background:var(--panel-2); color:var(--muted); border:1px solid var(--line); border-radius:8px; font-family:ui-monospace,Menlo,monospace; font-size:11px; resize:vertical; word-break:break-all;"></textarea>
   </div>
 
   <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--line);">
-    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🤖 Android — 用 Firefox</div>
-    <div style="margin-bottom:10px;">Chrome Android 不讓你建 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 開頭的書籤，必須改用 <strong>Firefox</strong>（或 Kiwi Browser）。</div>
+    <div style="font-weight:700; color:var(--text); margin-bottom:8px;">🤖 Android — 用 Firefox 編輯書籤</div>
+    <div style="margin-bottom:10px;">Chrome Android 不讓你建 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 開頭的書籤，必須改用 <strong>Firefox</strong>（或 Kiwi Browser）。做法跟 iPhone 一樣：先存書籤、再把網址換成上面那段程式碼。</div>
     <ol style="padding-left:22px; margin:8px 0;">
-      <li>從 Play Store 安裝 <strong>Firefox</strong></li>
-      <li>用 Firefox 開啟本站，<strong>長按</strong>上方的「📥 抓影音」按鈕 → <strong>加入書籤</strong></li>
-      <li>之後在任何影片頁，點網址列 → 切到「書籤」分頁 → 點「抓影音」即可</li>
+      <li>從 Play Store 安裝 <strong>Firefox</strong>，用它開啟本站</li>
+      <li>複製上方的<strong>書籤程式碼</strong>（同一段，iPhone / Android 通用）</li>
+      <li>Firefox 右下「<strong>⋮</strong>」選單 → 點書籤圖示「<strong>加入書籤</strong>」存下這一頁</li>
+      <li>再開「<strong>⋮</strong>」→「<strong>書籤</strong>」→ <strong>長按</strong>剛存的書籤 →「<strong>編輯</strong>」</li>
+      <li>名稱改「<strong>抓影音</strong>」；<strong>網址欄全選刪掉</strong>，<strong>貼上</strong>程式碼 → 儲存</li>
+      <li>之後在任何影片頁，開「⋮ → 書籤」點「抓影音」即可 ✅</li>
     </ol>
-    <div style="font-size:12px; margin-top:6px;">💡 如果書籤沒反應，編輯書籤確認網址是 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 開頭。</div>
+    <div style="font-size:12px; margin-top:6px;">💡 貼上後確認網址是 <code style="background:var(--panel-2); padding:1px 5px; border-radius:4px;">javascript:</code> 開頭，被吃掉就手動補打。</div>
   </div>
 </details>
 
@@ -341,51 +343,18 @@ const bookmarkletSource = `(function(){
 const bookmarkletHref = 'javascript:' + encodeURIComponent(bookmarkletSource.replace(/\s+/g, ' '));
 document.getElementById('bookmarklet').setAttribute('href', bookmarkletHref);
 
-/* ---------- iOS 捷徑程式碼：把 bookmarklet 改成用 completion() 回傳 URL ----------
- * iOS Shortcuts 的「在網頁上執行 JavaScript」action 會注入一個 completion()
- * 函式，呼叫它把回傳值送回給下一個 Shortcut 動作。我們回傳目標網址，
- * 使用者後續手動串接「打開 URL」動作，或直接把整段腳本貼進去當唯一動作
- * （Safari 會用該回傳值當輸出，下一步用「打開 URL」開啟）。 */
-const iosShortcutSource = `function runGrab(completion){
- try {
-  const found = new Map();
-  const add = (u, hint) => {
-    try { u = new URL(u, location.href).toString(); } catch (e) { return; }
-    if (!/^https?:/i.test(u)) return;
-    if (!found.has(u)) found.set(u, hint || '');
-  };
-  document.querySelectorAll('video[src],audio[src],source[src]').forEach(e => add(e.src, e.tagName.toLowerCase()));
-  document.querySelectorAll('video,audio').forEach(v => v.currentSrc && add(v.currentSrc, v.tagName.toLowerCase()));
-  document.querySelectorAll('track[src]').forEach(e => add(e.src, 'subtitle'));
-  document.querySelectorAll('meta[property*=video],meta[name*=video],meta[property*=audio]').forEach(m => add(m.content, 'meta'));
-  const html = document.documentElement.outerHTML;
-  const re = /https?:\\/\\/[^\\s"'<>\\\\]+\\.(?:mp4|webm|mov|mkv|m4v|ts|m3u8|mpd|mp3|m4a|aac|flac|wav|ogg|opus|weba)(?:\\?[^\\s"'<>\\\\]*)?/gi;
-  let m; while ((m = re.exec(html))) add(m[0]);
-  const keyRe = /"(?:hlsManifestUrl|dashManifestUrl|file|src|url|contentUrl)"\\s*:\\s*"([^"]+)"/g;
-  while ((m = keyRe.exec(html))) add(m[1].replace(/\\\\u002F/g,'/').replace(/\\\\\\//g,'/'));
-  const payload = {
-    src: location.href,
-    title: document.title || '',
-    thumb: document.querySelector('meta[property="og:image"]')?.content
-      || document.querySelector('video[poster]')?.poster || '',
-    items: [...found].map(([url, hint]) => ({ url, hint })),
-  };
-  const data = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  completion(${JSON.stringify(location.origin + location.pathname)} + '#grab=' + data);
- } catch (err) {
-  completion(${JSON.stringify(location.origin + location.pathname)} + '#err=' + encodeURIComponent(String(err && err.message || err)));
- }
-}
-runGrab(completion);`;
-document.getElementById('ios-shortcut-code').value = iosShortcutSource;
-document.getElementById('copy-ios-shortcut').addEventListener('click', async (e) => {
+/* ---------- 手機書籤程式碼：直接把 javascript: 字串顯示出來，供手動貼進書籤網址欄 ----------
+ * iOS Safari 不能拖書籤，但可「先存書籤 → 編輯 → 把網址換成這段 javascript:」達成。
+ * 這裡顯示的就是桌面拖曳用的同一串 bookmarkletHref。 */
+document.getElementById('bookmarklet-code').value = bookmarkletHref;
+document.getElementById('copy-bookmarklet-code').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
   const old = btn.textContent;
   try {
-    await navigator.clipboard.writeText(iosShortcutSource);
-    btn.textContent = '✓ 已複製，貼到捷徑裡';
+    await navigator.clipboard.writeText(bookmarkletHref);
+    btn.textContent = '✓ 已複製，去貼進書籤網址欄';
   } catch (_) {
-    const ta = document.getElementById('ios-shortcut-code');
+    const ta = document.getElementById('bookmarklet-code');
     ta.select(); document.execCommand('copy');
     btn.textContent = '✓ 已複製';
   }
